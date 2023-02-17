@@ -1,13 +1,17 @@
-﻿namespace Day14
+﻿using System.Security.Cryptography;
+
+namespace Day14
 {
     internal class Program
     {
         static void Main(string[] args)
         {
             Day14();
+            Part2(); //Part 2, work with dictionaries
 
-            void Day14()
+            void Day14() //Part 1, work with string.
             {
+                //Part 1
                 Dictionary<string, string> templ = GetTemplate();
                 string seq = GetSequence();
 
@@ -17,8 +21,12 @@
                     //Iterating the sequence string.
                     seq = Insertion(templ, seq);
                 }
-
                 Console.WriteLine(GetOutput(seq));
+            }
+
+            void Part2()
+            {
+                Insertion2(40);
             }
 
             long GetOutput(string seq)
@@ -66,6 +74,64 @@
                 return result;
             }
 
+            void Insertion2(int x)
+            {
+                //Template: ((c1, c2), c3)
+                //Polymer: ((c1,c1), count)
+                Dictionary<(char, char), char> template = GetTemplate2();
+                Dictionary<(char, char), long> polymer = GetSequence2();
+
+                for (int i = 0; i < x; i++)
+                {
+                    Dictionary<(char, char), long> newSeq = new Dictionary<(char, char), long>();
+                    
+                    foreach (var ((c1, c2), count) in polymer)
+                    {
+                        char newChar = template[(c1, c2)];
+
+                        if (!newSeq.ContainsKey((c1, newChar)))
+                        {
+                            newSeq.Add((c1, newChar), count);
+                        }
+                        else
+                        {
+                            newSeq[(c1, newChar)]+=count;
+                        }
+                        if (!newSeq.ContainsKey((newChar, c2)))
+                        {
+                            newSeq.Add((newChar, c2), count);
+                        }
+                        else
+                        {
+                            newSeq[(newChar, c2)]+=count;
+                        }
+                    }
+                    polymer.Clear();
+                    foreach (var ((c1, c2), count) in newSeq)
+                    {
+                        polymer[(c1, c2)] = count;
+                    }
+                }
+
+                Dictionary<char, long> result = new Dictionary<char, long>();
+                foreach(var ((c1, c2), count) in polymer)
+                {
+                    if (result.ContainsKey(c1))
+                    {
+                        result[c1] += count;
+                    }
+                    else
+                    {
+                        result[c1] = count;
+                    }
+                }
+
+                //Last char is not accounted for
+                char lostChar = GetSequence()[GetSequence().Length -1];
+                result[lostChar] += 1;
+                Console.WriteLine(result.Values.Max() - result.Values.Min());
+            }
+
             //Get template input
             Dictionary<string,string> GetTemplate()
             {
@@ -80,6 +146,20 @@
                 }
                 return templ;
             }
+
+            Dictionary<(char,char),char> GetTemplate2()
+            {
+                Dictionary<(char, char), char> templ = new Dictionary<(char, char), char>();
+                string path = @"C:\Users\Tardis\Documents\School\Advent of Code\2021\Day14\template.txt";
+                List<string> input = File.ReadAllLines(path).ToList();
+
+                for (int i = 0; i < input.Count(); i++)
+                {
+                    string[] items = input[i].Split(" -> ");
+                    templ.Add((items[0][0],items[0][1]), items[1][0]);
+                }
+                return templ;
+            }
             //Get sequence input
             string GetSequence()
             {
@@ -87,6 +167,28 @@
                 string input = File.ReadAllText(path);
                 
                 return input;
+            }
+            Dictionary<(char, char), long> GetSequence2()
+            {
+                Dictionary<(char, char), long> seq = new Dictionary<(char, char), long>();
+                string path = @"C:\Users\Tardis\Documents\School\Advent of Code\2021\Day14\seq.txt";
+                string input = File.ReadAllText(path);
+
+                for (int i = 0; i < input.Length-1; i++)
+                {
+                    char c1 = input[i];
+                    char c2 = input[i+1];
+                    if (seq.ContainsKey((c1, c2)))
+                    {
+                        seq[(c1, c2)] += 1;
+                    }
+                    else
+                    {
+                        seq.Add((c1, c2), 1);
+                    }
+                }
+                
+                return seq;
             }
         }
     }
@@ -172,10 +274,19 @@ What do you get if you take the quantity of the most common element and subtract
 */
 /*
  * 
- * NN, NC, CB
-NN -> NC, CNNC -> NB, BCCB -> CH, HB
+NNCB
+
+NN, NC, CB
+ 
+NN -> NC, CN
+NC -> NB,BC
+CB -> CH, HB
+
 NCNBCHB
+
 NC, CN, NB, BC, CH, HB
-NC -> NB; BCCN -> CC, CNNB -> NB, BB...
+NC -> NB; BC
+CN -> CC, CN
+NB -> NB, BB...
 2x NB -> 2x 2B, 2x BB
 */
